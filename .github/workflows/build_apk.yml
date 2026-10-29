@@ -1,0 +1,46 @@
+name: Zbuduj APK Skanera Kwot
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Pobierz pliki z repozytorium
+        uses: actions/checkout@v4
+
+      - name: Zainstaluj Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Zainstaluj Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Wygeneruj brakujący szkielet projektu Android
+        run: |
+          flutter create --platforms=android --org com.example.skaner .
+
+      - name: Skonfiguruj uprawnienia kamery i wersję SDK
+        run: |
+          sed -i 's/<application/<uses-permission android:name="android.permission.CAMERA" \/><uses-feature android:name="android.hardware.camera" android:required="true" \/><application/' android/app/src/main/AndroidManifest.xml
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' android/app/build.gradle || true
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' android/app/build.gradle || true
+
+      - name: Pobierz biblioteki i zbuduj plik APK
+        run: |
+          flutter pub get
+          flutter build apk --release
+
+      - name: Udostępnij gotowy plik APK do pobrania
+        uses: actions/upload-artifact@v4
+        with:
+          name: Skaner-Kwot-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
